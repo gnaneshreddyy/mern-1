@@ -4,10 +4,7 @@ dotenv.config();
 import express from "express";
 import Product from "./models/product.model.js";
 import { connectDB } from "./config/db.js";
-import mongoose from "mongoose";
 import cors from "cors";
-
-
 
 connectDB();
 
@@ -69,10 +66,19 @@ app.post('/api/products', async (req, res) => {
         });
     }
     
+    // Validate price is a valid number
+    const priceNum = parseFloat(price);
+    if (isNaN(priceNum) || priceNum <= 0) {
+        return res.status(400).json({
+            success: false,
+            message: 'Price must be a valid positive number'
+        });
+    }
+    
     try {
         const product = new Product({
             name,
-            price,
+            price: priceNum,
             image
         });
         
@@ -86,7 +92,7 @@ app.post('/api/products', async (req, res) => {
         console.error('Error creating product:', error);
         res.status(500).json({
             success: false,
-            message: 'Server Error'
+            message: error.message || 'Server Error'
         });
     }
 });
