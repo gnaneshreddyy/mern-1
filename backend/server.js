@@ -3,6 +3,7 @@ dotenv.config();
 
 import express from "express";
 import Product from "./models/product.model.js";
+import Cart from "./models/cart.model.js";
 import { connectDB } from "./config/db.js";
 import cors from "cors";
 
@@ -159,6 +160,121 @@ app.delete('/api/products/:id', async (req, res) => {
 });
 
 
+
+// ========== CART API ENDPOINTS ==========
+
+// GET - Get all cart items with product details
+app.get('/api/cart', async (req, res) => {
+    try {
+        const cartItems = await Cart.find({}).populate('productId');
+        res.status(200).json({
+            success: true,
+            data: cartItems
+        });
+    } catch (error) {
+        console.error('Error fetching cart:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server Error'
+        });
+    }
+});
+
+// POST - Add product to cart
+app.post('/api/cart', async (req, res) => {
+    const { productId } = req.body;
+    
+    if (!productId) {
+        return res.status(400).json({
+            success: false,
+            message: 'Please provide productId'
+        });
+    }
+    
+    try {
+        // Check if product exists
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found'
+            });
+        }
+        
+        // Check if item already in cart
+        const existingItem = await Cart.findOne({ productId });
+        
+        if (existingItem) {
+            // Increment quantity
+            existingItem.quantity += 1;
+            await existingItem.save();
+            const updatedItem = await Cart.findById(existingItem._id).populate('productId');
+            return res.status(200).json({
+                success: true,
+                data: updatedItem
+            });
+        } else {
+            // Add new item
+            const cartItem = new Cart({ productId });
+            await cartItem.save();
+            const newItem = await Cart.findById(cartItem._id).populate('productId');
+            return res.status(201).json({
+                success: true,
+                data: newItem
+            });
+        }
+    } catch (error) {
+        console.error('Error adding to cart:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Server Error'
+        });
+    }
+});
+
+// DELETE - Remove item from cart
+app.delete('/api/cart/:id', async (req, res) => {
+    try {
+        const cartItem = await Cart.findById(req.params.id);
+        
+        if (!cartItem) {
+            return res.status(404).json({
+                success: false,
+                message: 'Cart item not found'
+            });
+        }
+        
+        await Cart.findByIdAndDelete(req.params.id);
+        
+        res.status(200).json({
+            success: true,
+            message: 'Item removed from cart'
+        });
+    } catch (error) {
+        console.error('Error removing from cart:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server Error'
+        });
+    }
+});
+
+// DELETE - Clear entire cart
+app.delete('/api/cart', async (req, res) => {
+    try {
+        await Cart.deleteMany({});
+        res.status(200).json({
+            success: true,
+            message: 'Cart cleared'
+        });
+    } catch (error) {
+        console.error('Error clearing cart:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server Error'
+        });
+    }
+});
 
 app.listen(PORT, () => {
   console.log("server started at localhost:"+PORT);
