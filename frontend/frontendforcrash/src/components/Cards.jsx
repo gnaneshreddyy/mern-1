@@ -57,7 +57,8 @@ function Cards() {
       });
       const data = await response.json();
       if (data.success) {
-        // Cart updated in MongoDB, Cart component will auto-refresh
+        // Trigger immediate cart refresh
+        window.dispatchEvent(new Event('cartUpdated'));
       } else {
         alert('Error adding to cart: ' + data.message);
       }

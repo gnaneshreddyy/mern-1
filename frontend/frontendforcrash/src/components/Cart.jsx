@@ -19,14 +19,21 @@ function Cart() {
     }
   };
 
+  // Always fetch cart data, refresh every 1 second
   useEffect(() => {
-    if (isOpen) {
+    fetchCart();
+    const interval = setInterval(fetchCart, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Listen for custom event when item is added to cart
+  useEffect(() => {
+    const handleCartUpdate = () => {
       fetchCart();
-      // Refetch cart every 2 seconds when modal is open
-      const interval = setInterval(fetchCart, 2000);
-      return () => clearInterval(interval);
-    }
-  }, [isOpen]);
+    };
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    return () => window.removeEventListener('cartUpdated', handleCartUpdate);
+  }, []);
 
   const handleRemove = async (cartItemId) => {
     try {
